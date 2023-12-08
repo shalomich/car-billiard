@@ -1,0 +1,25 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "strict": true,
+    "strictNullChecks": true,
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2020",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@babylonjs-boilerplate/core": ["libs/core/src/index.ts"],
+      "@babylonjs-boilerplate/immersive": ["libs/immersive/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

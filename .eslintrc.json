@@ -1,0 +1,117 @@
+{
+  "root": true,
+  "ignorePatterns": ["**/*"],
+  "plugins": ["@nrwl/nx"],
+  "overrides": [
+    {
+      "files": ["*.ts", "*.js"],
+      "plugins": ["rxjs"],
+      "extends": ["plugin:@nrwl/nx/typescript", "@saritasa/eslint-config-saritasa"],
+      "rules": {
+        "rxjs/no-exposed-subjects": [
+          "error",
+          {
+            "allowProtected": true
+          }
+        ],
+        "rxjs/finnish": [
+          "error",
+          {
+            "functions": false,
+            "methods": false,
+            "names": {
+              "^(canActivate|canActivateChild|canDeactivate|canLoad|intercept|resolve|validate)$": false
+            },
+            "parameters": true,
+            "properties": true,
+            "strict": true,
+            "types": {
+              "^EventEmitter$": false
+            },
+            "variables": true
+          }
+        ],
+        "rxjs/no-ignored-replay-buffer": "error",
+        "rxjs/no-internal": "error",
+        "rxjs/no-nested-subscribe": "error",
+        "rxjs/no-unbound-methods": "error",
+        "rxjs/throw-error": "error",
+        "rxjs/no-async-subscribe": "error",
+        "rxjs/no-create": "error",
+        "rxjs/no-ignored-observable": "error",
+        "rxjs/no-implicit-any-catch": "error",
+        "rxjs/no-index": "error",
+        "rxjs/no-sharereplay": [
+          "error",
+          {
+            "allowConfig": true
+          }
+        ],
+        "rxjs/no-subclass": "error",
+        "rxjs/no-subject-value": "error",
+        "rxjs/no-unsafe-takeuntil": [
+          "error",
+          {
+            "alias": ["takeUntilDestroy"]
+          }
+        ],
+        "@nrwl/nx/enforce-module-boundaries": [
+          "error",
+          {
+            "enforceBuildableLibDependency": true,
+            "allow": [],
+            "depConstraints": [
+              {
+                "sourceTag": "*",
+                "onlyDependOnLibsWithTags": ["*"]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["*.dto.ts", "*.mapper.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "TSPropertySignature[readonly=undefined]",
+            "message": "Missing 'readonly' modifier for the DTO property."
+          },
+          {
+            "selector": "TSPropertySignature TSTypeAnnotation[typeAnnotation.type='TSArrayType']",
+            "message": "Missing 'readonly' type modifier for array."
+          }
+        ],
+        "@typescript-eslint/naming-convention": "off"
+      }
+    },
+    {
+      "files": ["*.html"],
+      "extends": ["plugin:@nrwl/nx/angular-template", "plugin:@angular-eslint/template/recommended"],
+      "rules": {
+        "@angular-eslint/template/button-has-type": "error",
+        "@angular-eslint/template/use-track-by-function": "error"
+      }
+    },
+    {
+      "files": ["*.component.ts"],
+      "extends": ["plugin:@angular-eslint/template/process-inline-templates"],
+      "plugins": ["rxjs"],
+      "rules": {
+        "rxjs/no-exposed-subjects": "off",
+        "@angular-eslint/no-lifecycle-call": ["error"],
+        "@angular-eslint/prefer-on-push-component-change-detection": ["error"],
+        "@angular-eslint/prefer-output-readonly": ["error"]
+      }
+    },
+    {
+      "files": ["*.spec.ts"],
+      "env": {
+        "jest": true
+      },
+      "rules": {}
+    }
+  ]
+}
