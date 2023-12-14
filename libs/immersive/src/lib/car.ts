@@ -1,34 +1,19 @@
-import {
-  AbstractMesh,
-  Animation,
-  IDisposable,
-  Scene,
-  Vector3,
-} from '@babylonjs/core';
-import {
-  Observable,
-  Subscription,
-  debounceTime,
-  distinctUntilChanged,
-  tap,
-} from 'rxjs';
+import { AbstractMesh, Animation, Scene, Vector3 } from '@babylonjs/core';
 
 import { VectorUtils } from './vector.utils';
 
 /** Card. */
-export class Car implements IDisposable {
-  private readonly movementSubscription: Subscription;
-
+export class Car {
   public constructor(
     private readonly carMesh: AbstractMesh,
-    private readonly scene: Scene,
-    private movement$: Observable<Vector3>
-  ) {
-    this.initCarRotation();
-    this.movementSubscription = this.subscribeToMovement();
-  }
+    private readonly scene: Scene
+  ) {}
 
-  private move(destination: Vector3): void {
+  /**
+   * Move to destination.
+   * @param destination - Destination point.
+   */
+  public move(destination: Vector3): void {
     this.scene.beginDirectAnimation(
       this.carMesh,
       [this.getTurnAnimation(destination)],
@@ -51,7 +36,7 @@ export class Car implements IDisposable {
   private getTurnAnimation(destination: Vector3): Animation {
     const { position } = this.carMesh;
 
-    const axisBeginning = new Vector3(position.x, position.y, position.z - 1);
+    const axisBeginning = new Vector3(position.x, position.y, position.z + 1);
 
     const angle = VectorUtils.calculateAngleInRadians(
       axisBeginning,
@@ -74,7 +59,7 @@ export class Car implements IDisposable {
       },
       {
         frame: 30,
-        value: position.x > destination.x ? angle : -angle,
+        value: position.x < destination.x ? angle : -angle,
       },
     ]);
 
@@ -108,30 +93,5 @@ export class Car implements IDisposable {
     ]);
 
     return transferAnimation;
-  }
-
-  private subscribeToMovement(): Subscription {
-    return this.movement$
-      .pipe(
-        debounceTime(1000),
-        distinctUntilChanged(
-          (previous, current) =>
-            previous.x === current.x &&
-            previous.y === current.y &&
-            current.z === previous.z
-        ),
-        tap((point) => (point.y = this.carMesh.position.y))
-      )
-      .subscribe((destination) => this.move(destination));
-  }
-
-  private initCarRotation(): void {
-    this.carMesh.rotationQuaternion = null;
-    this.carMesh.rotation = new Vector3(0, 0, 0);
-  }
-
-  /** @inheritdoc */
-  public dispose(): void {
-    this.movementSubscription.unsubscribe();
   }
 }
