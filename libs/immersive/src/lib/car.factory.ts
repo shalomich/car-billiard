@@ -8,10 +8,10 @@ import {
   SceneLoader,
   Vector3,
 } from '@babylonjs/core';
-import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 import { Car } from './car';
-import { PointClickNotifier } from './point-click-notifier';
+import { DestinationPointPublisher } from './destination-point-publisher';
 
 /** Car creating result. */
 export interface CarCreatingResult {
@@ -50,7 +50,11 @@ export namespace CarFactory {
 
     const car = new Car(carMesh, scene);
 
-    const movementSubscription = addMovementSubscription(car, scene);
+    const movementSubscription = addMovementSubscription(
+      car,
+      scene,
+      groundMesh
+    );
 
     const disposeCar = (): void => movementSubscription.unsubscribe();
 
@@ -63,13 +67,14 @@ export namespace CarFactory {
    */
   async function importCarMesh(scene: Scene): Promise<CarImportResult> {
     const importResult = await SceneLoader.ImportMeshAsync(
-      '',
+      null,
       'assets/',
       'car.glb',
       scene
     );
 
     const mesh = importResult.meshes[0] as Mesh;
+    mesh.id = 'car';
     const geometry = importResult.geometries[0];
 
     return {
@@ -94,7 +99,7 @@ export namespace CarFactory {
     const carAggregate = new PhysicsAggregate(
       carMesh,
       PhysicsShapeType.MESH,
-      { mass: 10 },
+      { mass: 5, friction: 0 },
       scene
     );
 
@@ -128,20 +133,20 @@ export namespace CarFactory {
    * Add movement subscription.
    * @param scene - Scene.
    * @param car - Car.
+   * @param groundMesh - Ground mesh.
    */
-  function addMovementSubscription(car: Car, scene: Scene): Subscription {
-    const pointClickNotifier = new PointClickNotifier(scene);
+  function addMovementSubscription(
+    car: Car,
+    scene: Scene,
+    groundMesh: GroundMesh
+  ): Subscription {
+    const destinationPointPublisher = new DestinationPointPublisher(
+      scene,
+      groundMesh
+    );
 
-    return pointClickNotifier.clickedPoints$
-      .pipe(
-        debounceTime(1000),
-        distinctUntilChanged(
-          (previous, current) =>
-            previous.x === current.x &&
-            previous.y === current.y &&
-            current.z === previous.z
-        )
-      )
-      .subscribe((destination) => car.move(destination));
+    return destinationPointPublisher.destinationPoints$.subscribe(
+      (destinationPoint) => car.move(destinationPoint)
+    );
   }
 }

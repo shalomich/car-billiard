@@ -1,9 +1,14 @@
 import { AbstractMesh, Animation, Scene, Vector3 } from '@babylonjs/core';
 
 import { VectorUtils } from './vector.utils';
+import { DestinationPoint } from './destination-point';
 
 /** Card. */
 export class Car {
+  private readonly mass = 5 as const;
+
+  private readonly acceleration = 50 as const;
+
   public constructor(
     private readonly carMesh: AbstractMesh,
     private readonly scene: Scene
@@ -11,36 +16,28 @@ export class Car {
 
   /**
    * Move to destination.
-   * @param destination - Destination point.
+   * @param destinationPoint - Destination point.
    */
-  public move(destination: Vector3): void {
+  public move(destinationPoint: DestinationPoint): void {
     this.scene.beginDirectAnimation(
       this.carMesh,
-      [this.getTurnAnimation(destination)],
+      [this.getTurnAnimation(destinationPoint)],
       0,
       30,
       false,
       1,
-      () => {
-        this.scene.beginDirectAnimation(
-          this.carMesh,
-          [this.getTransferAnimation(destination)],
-          0,
-          30,
-          false
-        );
-      }
+      () => this.transferTo(destinationPoint)
     );
   }
 
-  private getTurnAnimation(destination: Vector3): Animation {
+  private getTurnAnimation(destinationPoint: DestinationPoint): Animation {
     const { position } = this.carMesh;
 
     const axisBeginning = new Vector3(position.x, position.y, position.z + 1);
 
     const angle = VectorUtils.calculateAngleInRadians(
       axisBeginning,
-      destination,
+      destinationPoint.position,
       this.carMesh.position
     );
 
@@ -59,39 +56,41 @@ export class Car {
       },
       {
         frame: 30,
-        value: position.x < destination.x ? angle : -angle,
+        value: position.x < destinationPoint.position.x ? angle : -angle,
       },
     ]);
 
     return turnAnimation;
   }
 
-  private getTransferAnimation(destination: Vector3): Animation {
-    const adaptivedDestination = new Vector3(
-      destination.x,
-      this.carMesh.position.y,
-      destination.z
-    );
+  private transferTo(destinationPoint: DestinationPoint): void {
+    const force = this.mass * this.acceleration;
+    const forceVector = VectorUtils.getDirectionalVector(
+      this.carMesh.position,
+      destinationPoint.position
+    ).scale(force);
+    const carBody = this.carMesh.physicsBody;
 
-    const transferAnimation = new Animation(
-      'transferAnimation',
-      'position',
-      30,
-      Animation.ANIMATIONTYPE_VECTOR3,
-      Animation.ANIMATIONLOOPMODE_CYCLE
-    );
+    if (carBody === null) {
+      throw new Error('There is no car physics body.');
+    }
 
-    transferAnimation.setKeys([
-      {
-        frame: 0,
-        value: this.carMesh.position,
-      },
-      {
-        frame: 30,
-        value: adaptivedDestination,
-      },
-    ]);
+    carBody.setCollisionCallbackEnabled(true);
+    carBody.applyForce(forceVector, this.carMesh.position);
 
-    return transferAnimation;
+    const collisionObserver = carBody.getCollisionObservable().add((event) => {
+      if (event.collidedAgainst.transformNode.id !== DestinationPoint.meshId) {
+        return;
+      }
+
+      this.stop(destinationPoint);
+      carBody.getCollisionObservable().remove(collisionObserver);
+    });
+  }
+
+  private stop(destinationPoint: DestinationPoint): void {
+    this.carMesh.physicsBody?.setLinearVelocity(Vector3.Zero());
+    this.carMesh.physicsBody?.setAngularVelocity(Vector3.Zero());
+    destinationPoint.dispose();
   }
 }
