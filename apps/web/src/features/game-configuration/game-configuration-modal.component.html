@@ -1,0 +1,35 @@
+<form [formGroup]="formGroup" class="game-configuration-form">
+	<mat-form-field>
+        <mat-label>Cube count</mat-label>
+        <input
+            type="number" 
+            matInput 
+            [formControl]="formGroup.controls.cubeCount" />
+        <mat-error *ngIf="formGroup.controls.cubeCount.hasError('min')">Count can not be less than {{minFigureCount}}</mat-error>
+        <mat-error *ngIf="formGroup.controls.cubeCount.hasError('max')">Count can not be more than {{maxFigureCount}}</mat-error>            
+    </mat-form-field>
+    <mat-form-field>
+        <mat-label>Cylinder count</mat-label>
+        <input
+            type="number" 
+            matInput 
+            [formControl]="formGroup.controls.cylinderCount" />
+        <mat-error *ngIf="formGroup.controls.cylinderCount.hasError('min')">Count can not be less than {{minFigureCount}}</mat-error>
+        <mat-error *ngIf="formGroup.controls.cylinderCount.hasError('max')">Count can not be more than {{maxFigureCount}}</mat-error>            
+    </mat-form-field>
+    <mat-form-field>
+        <mat-label>Sphere count</mat-label>
+        <input 
+            type="number" 
+            matInput 
+            [formControl]="formGroup.controls.sphereCount" />
+        <mat-error *ngIf="formGroup.controls.sphereCount.hasError('min')">Count can not be less than {{minFigureCount}}</mat-error>
+        <mat-error *ngIf="formGroup.controls.sphereCount.hasError('max')">Count can not be more than {{maxFigureCount}}</mat-error>                
+    </mat-form-field>
+    <button 
+        type="button"
+        mat-button 
+        (click)="handleGameStart()">
+        Start
+    </button>
+</form>

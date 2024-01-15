@@ -1,0 +1,7 @@
+.game-configuration-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 0 1 500px;
+    padding: 10px;
+}

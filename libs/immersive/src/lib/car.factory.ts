@@ -39,8 +39,8 @@ export namespace CarFactory {
    * @param groundMesh - Ground mesh.
    */
   export async function create(
+    groundMesh: GroundMesh,
     scene: Scene,
-    groundMesh: GroundMesh
   ): Promise<CarCreatingResult> {
     const { mesh: carMesh, geometry: carGeometry } = await importCarMesh(scene);
 

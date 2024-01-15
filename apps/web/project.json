@@ -15,7 +15,10 @@
         "polyfills": ["zone.js"],
         "tsConfig": "apps/web/tsconfig.app.json",
         "assets": ["apps/web/src/favicon.ico", "apps/web/src/assets"],
-        "styles": ["apps/web/src/styles.css"],
+        "styles": [
+          "apps/web/src/styles.css",
+          "@angular/material/prebuilt-themes/deeppurple-amber.css"
+        ],
         "scripts": []
       },
       "configurations": {
