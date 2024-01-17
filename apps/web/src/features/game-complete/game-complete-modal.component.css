@@ -1,0 +1,4 @@
+.game-complete-actions {
+    display: flex;
+    justify-content: space-around;
+}

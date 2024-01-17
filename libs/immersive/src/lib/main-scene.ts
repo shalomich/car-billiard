@@ -12,6 +12,7 @@ import { FiguresManager } from './figures.manager';
 import { GameConfiguration } from './game-configuration';
 import { Ground } from './ground';
 import { Car } from './car';
+import { DestinationPoint } from './destination-point';
 
 declare const HavokPhysics: () => Promise<unknown>;
 
@@ -29,7 +30,8 @@ export class MainScene {
 
   public constructor(
     private readonly canvas: HTMLCanvasElement,
-    gameConfiguration: GameConfiguration) {
+    public readonly gameConfiguration: GameConfiguration,
+    onGameComplete: () => void) {
     this.engine.runRenderLoop(() => this.scene.render());
     this.scene.useRightHandedSystem = true;
     MainCamera.create(this.scene);
@@ -39,6 +41,7 @@ export class MainScene {
       this.ground = Ground.create(this.scene);
       this.figureManager = new FiguresManager(this.ground, this.scene);
       this.figureManager.initFigures(gameConfiguration);
+      this.figureManager.onFiguresEnd = onGameComplete;
       CarFactory.create(this.ground, this.scene).then(({ car, disposeCar }) => {
         this.car = car;
         this.disposeCar = disposeCar;
@@ -53,6 +56,7 @@ export class MainScene {
     this.ground?.dispose();
     this.car?.dispose();
     this.figureManager?.dispose();
+    DestinationPoint.instance?.dispose();
     this.disposeCar?.();
   }
 

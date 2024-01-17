@@ -13,6 +13,7 @@ import { GameConfiguration } from 'libs/immersive/src/lib/game-configuration';
 import { GameConfigurationModalComponent } from '../features/game-configuration/game-configuration-modal.component';
 import { MatDialog } from '@angular/material/dialog';
 import { filter, tap } from 'rxjs';
+import { GameCompleteModalComponent } from '../features/game-complete/game-complete-modal.component';
 
 /** App component. */
 @Component({
@@ -58,8 +59,43 @@ export class AppComponent implements OnDestroy, OnInit {
   private startGame(gameConfiguration: GameConfiguration): void {
     this.ngZone.runOutsideAngular(() => {
       if (this.canvasRef != null) {
-        this.scene = new MainScene(this.canvasRef.nativeElement, gameConfiguration);
+        this.scene = new MainScene(
+          this.canvasRef.nativeElement, 
+          gameConfiguration,
+          () => this.openGameCompletionModal()
+        );
       }
+    });
+  }
+
+  private openGameCompletionModal() {
+    this.dialog.open<GameCompleteModalComponent, null, boolean>(GameCompleteModalComponent, {
+      disableClose: true,
+    })
+      .afterClosed()
+      .pipe(
+        filter((isRestart): isRestart is boolean => isRestart !== undefined),
+        tap(isRestart => isRestart ? this.restartGame() : this.prepateToNewGame()),
+      )
+      .subscribe();
+  }
+
+  private restartGame(): void {
+    if (this.scene === null) {
+      throw new Error('Scene can not be null.');
+    }
+
+    const previousConfiguration = this.scene.gameConfiguration;
+    this.scene.erase();
+
+    this.startGame(previousConfiguration);
+  }
+
+  private prepateToNewGame(): void {
+    this.scene?.erase();
+
+    this.ngZone.run(() => {
+      this.openGameConfigurationModal();
     });
   }
 }

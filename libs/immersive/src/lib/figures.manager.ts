@@ -17,6 +17,8 @@ export class FiguresManager implements IDisposable {
         private readonly scene: Scene) {
 
     }
+
+    public onFiguresEnd: () => void = () => undefined;
     
     public initFigures(
         configuration: GameConfiguration, 
@@ -58,6 +60,10 @@ export class FiguresManager implements IDisposable {
         console.log('delete ' + figure.id);        
         figure.dispose();
         this.figures.delete(figure.id);
+
+        if (this.figures.size === 0) {
+            this.onFiguresEnd();
+        }
     }
 
     /** @inheritdoc */
