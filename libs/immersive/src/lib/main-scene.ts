@@ -1,22 +1,17 @@
 import {
-  Color3,
   Engine,
-  GroundMesh,
-  MeshBuilder,
   Scene,
-  StandardMaterial,
-  Vector3,
   HavokPlugin,
-  PhysicsAggregate,
-  PhysicsShapeType,
 } from '@babylonjs/core';
 
 import { MainLight } from './main-light';
 import { MainCamera } from './main-camera';
 import '@babylonjs/loaders/glTF';
 import { CarFactory } from './car.factory';
-import { FiguresFactory } from './figure.factory';
+import { FiguresManager } from './figures.manager';
 import { GameConfiguration } from './game-configuration';
+import { Ground } from './ground';
+import { Car } from './car';
 
 declare const HavokPhysics: () => Promise<unknown>;
 
@@ -25,6 +20,10 @@ export class MainScene {
   private readonly engine = new Engine(this.canvas);
 
   private readonly scene = new Scene(this.engine);
+
+  private figureManager: FiguresManager | null = null;
+  private ground: Ground | null = null;
+  private car: Car | null = null;
 
   private disposeCar?: () => void;
 
@@ -36,13 +35,12 @@ export class MainScene {
     MainCamera.create(this.scene);
     MainLight.create(this.scene);
 
-    this.addPhysics().then((plugin) => {
-      plugin.onTriggerCollisionObservable.add((event) =>
-        console.log(event.collidedAgainst.transformNode.id)
-      );
-      const groundMesh = this.createGround();
-      FiguresFactory.create(gameConfiguration, groundMesh, this.scene);
-      CarFactory.create(groundMesh, this.scene).then(({ disposeCar }) => {
+    this.addPhysics().then(() => {
+      this.ground = Ground.create(this.scene);
+      this.figureManager = new FiguresManager(this.ground, this.scene);
+      this.figureManager.initFigures(gameConfiguration);
+      CarFactory.create(this.ground, this.scene).then(({ car, disposeCar }) => {
+        this.car = car;
         this.disposeCar = disposeCar;
       });
     });
@@ -52,28 +50,10 @@ export class MainScene {
   public erase(): void {
     this.scene.dispose();
     this.engine.dispose();
+    this.ground?.dispose();
+    this.car?.dispose();
+    this.figureManager?.dispose();
     this.disposeCar?.();
-  }
-
-  // Dumb ground. Just to show something at scene
-  private createGround(): GroundMesh {
-    const ground = MeshBuilder.CreateGround(
-      'ground',
-      { width: 20, height: 20 },
-      this.scene
-    );
-    const material = new StandardMaterial('groundMaterial', this.scene);
-    material.diffuseColor = Color3.Green();
-    ground.material = material;
-
-    const groundAggregate = new PhysicsAggregate(
-      ground,
-      PhysicsShapeType.BOX,
-      { mass: 0 },
-      this.scene
-    );
-
-    return ground;
   }
 
   private async addPhysics(): Promise<HavokPlugin> {

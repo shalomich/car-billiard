@@ -1,23 +1,24 @@
 import { GroundMesh, Scene, Vector3 } from '@babylonjs/core';
-import { Observable, debounceTime, distinctUntilChanged, map } from 'rxjs';
+import { Observable, debounceTime, distinctUntilChanged, filter, map } from 'rxjs';
 
 import { DestinationPoint } from './destination-point';
+import { Ground } from './ground';
 
 /** Destination point publisher. */
 export class DestinationPointPublisher {
   /** Destination points stream. */
   public readonly destinationPoints$: Observable<DestinationPoint>;
 
-  public constructor(scene: Scene, groundMesh: GroundMesh) {
+  public constructor(scene: Scene, ground: Ground) {
     this.destinationPoints$ = this.getDestinationPointsStream(
       scene,
-      groundMesh
+      ground
     );
   }
 
   private getDestinationPointsStream(
     scene: Scene,
-    groundMesh: GroundMesh
+    ground: Ground,
   ): Observable<DestinationPoint> {
     return this.getTappingStream(scene).pipe(
       debounceTime(1000),
@@ -27,9 +28,9 @@ export class DestinationPointPublisher {
           previous.y === current.y &&
           current.z === previous.z
       ),
-      map((coordinates) =>
-        DestinationPoint.create(coordinates, scene, groundMesh)
-      )
+      filter(point => ground.hasPoint(point)),
+      map(point => new Vector3(point.x, ground.position.y, point.z)),
+      map(position => DestinationPoint.changePosition(position, scene))
     );
   }
 

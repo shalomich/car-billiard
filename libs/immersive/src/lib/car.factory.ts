@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 
 import { Car } from './car';
 import { DestinationPointPublisher } from './destination-point-publisher';
+import { Ground } from './ground';
 
 /** Car creating result. */
 export interface CarCreatingResult {
@@ -39,21 +40,21 @@ export namespace CarFactory {
    * @param groundMesh - Ground mesh.
    */
   export async function create(
-    groundMesh: GroundMesh,
+    ground: Ground,
     scene: Scene,
   ): Promise<CarCreatingResult> {
     const { mesh: carMesh, geometry: carGeometry } = await importCarMesh(scene);
 
     addPhysics(carMesh, carGeometry, scene);
     addRotation(carMesh);
-    addPosition(carMesh, groundMesh);
+    addPosition(carMesh, ground);
 
-    const car = new Car(carMesh, scene);
+    const car = new Car(carMesh, ground, scene);
 
     const movementSubscription = addMovementSubscription(
       car,
       scene,
-      groundMesh
+      ground
     );
 
     const disposeCar = (): void => movementSubscription.unsubscribe();
@@ -99,7 +100,7 @@ export namespace CarFactory {
     const carAggregate = new PhysicsAggregate(
       carMesh,
       PhysicsShapeType.MESH,
-      { mass: 5, friction: 0 },
+      { mass: 5, friction: 0.2 },
       scene
     );
 
@@ -110,13 +111,13 @@ export namespace CarFactory {
   /**
    * Add car position.
    * @param carMesh - Car mesh.
-   * @param groundMesh - Ground mesh.
+   * @param ground - Ground.
    */
-  function addPosition(carMesh: Mesh, groundMesh: GroundMesh): void {
+  function addPosition(carMesh: Mesh, ground: Ground): void {
     carMesh.position = new Vector3(
-      groundMesh.position.x,
-      groundMesh.position.y + carMesh.scaling.y / 2,
-      groundMesh.position.z
+      ground.position.x,
+      ground.position.y + carMesh.scaling.y / 2,
+      ground.position.z
     );
   }
 
@@ -133,16 +134,16 @@ export namespace CarFactory {
    * Add movement subscription.
    * @param scene - Scene.
    * @param car - Car.
-   * @param groundMesh - Ground mesh.
+   * @param ground - Ground.
    */
   function addMovementSubscription(
     car: Car,
     scene: Scene,
-    groundMesh: GroundMesh
+    ground: Ground
   ): Subscription {
     const destinationPointPublisher = new DestinationPointPublisher(
       scene,
-      groundMesh
+      ground
     );
 
     return destinationPointPublisher.destinationPoints$.subscribe(

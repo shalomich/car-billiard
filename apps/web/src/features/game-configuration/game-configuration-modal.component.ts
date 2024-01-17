@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Output, inject } from '@angular/core';
 import { GameConfigurationFormControls } from './game-configuration-form';
 import { FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
-import { minFigureCount, maxFigureCount } from 'libs/immersive/src/lib/figure.factory';
+import { FiguresManager } from 'libs/immersive/src/lib/figures.manager';
 import { MatDialogRef } from '@angular/material/dialog';
 import { GameConfiguration } from 'libs/immersive/src/lib/game-configuration';
 
@@ -18,9 +18,9 @@ import { GameConfiguration } from 'libs/immersive/src/lib/game-configuration';
 
     private readonly dialogRef = inject(MatDialogRef<GameConfigurationModalComponent>);
 
-    protected readonly minFigureCount = minFigureCount;
+    protected readonly minFigureCount = FiguresManager.minFigureCount;
 
-    protected readonly maxFigureCount = maxFigureCount;
+    protected readonly maxFigureCount = FiguresManager.maxFigureCount;
 
     /** Game configuration form group. */
 	protected readonly formGroup: FormGroup<GameConfigurationFormControls>;

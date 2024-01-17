@@ -1,6 +1,5 @@
 import {
   Color3,
-  GroundMesh,
   IDisposable,
   Mesh,
   MeshBuilder,
@@ -8,39 +7,57 @@ import {
   PhysicsShapeType,
   Scene,
   StandardMaterial,
+  TransformNode,
   Vector3,
 } from '@babylonjs/core';
 
 /** Destination point. */
 export class DestinationPoint implements IDisposable {
-  /** Mesh id. */
-  public static readonly meshId = 'destination' as const;
+  
+  private static readonly id = 'destination' as const;
+
+  private static _instance: DestinationPoint | null = null;
+
+  public static get instance(): DestinationPoint | null {
+    return DestinationPoint._instance;
+  }
+
+  private constructor(private readonly mesh: Mesh) {
+  }
 
   /** Destination point position. */
   public get position(): Vector3 {
     return this.mesh.position;
   }
 
-  public constructor(private readonly mesh: Mesh) {}
+  public static changePosition(position: Vector3, scene: Scene): DestinationPoint {
+    if (DestinationPoint._instance === null) {
+      DestinationPoint._instance = DestinationPoint.create(scene);
+    }
+
+    DestinationPoint._instance.mesh.position = position;
+    DestinationPoint._instance.mesh.setEnabled(true);
+
+    return DestinationPoint._instance;
+  }
+
+  public static isDestinationPoint(node: TransformNode): node is Mesh {
+    return node.id === DestinationPoint.id;
+  }
 
   /**
    * Create destination point.
-   * @param coordinates - Coordinates.
+   * @param position - Position.
    * @param scene - Scene.
-   * @param groundMesh - Ground mesh.
    */
-  public static create(
-    coordinates: Vector3,
+  private static create(
     scene: Scene,
-    groundMesh: GroundMesh
   ): DestinationPoint {
     const destinationPointMesh = MeshBuilder.CreateCylinder(
-      this.meshId,
-      { diameter: 1.5, height: 0.5 },
+      DestinationPoint.id,
+      { diameter: 1,  height: 0.1},
       scene
     );
-    destinationPointMesh.position = coordinates;
-    destinationPointMesh.position.y = groundMesh.position.y;
 
     const material = new StandardMaterial('destinationPointMaterial', scene);
     material.diffuseColor = Color3.Red();
@@ -53,11 +70,18 @@ export class DestinationPoint implements IDisposable {
       scene
     );
 
+    destinationPointAggregate.body.disablePreStep = false;
+
     return new DestinationPoint(destinationPointMesh);
+  }
+
+  public hide(): void {
+    this.mesh.setEnabled(false);
   }
 
   /** @inheritdoc */
   public dispose(): void {
     this.mesh.dispose();
+    DestinationPoint._instance = null;
   }
 }
