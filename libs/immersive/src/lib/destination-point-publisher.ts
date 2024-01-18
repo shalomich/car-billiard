@@ -1,5 +1,5 @@
 import { GroundMesh, Scene, Vector3 } from '@babylonjs/core';
-import { Observable, debounceTime, distinctUntilChanged, filter, map } from 'rxjs';
+import { Observable, debounceTime, distinctUntilChanged, filter, map, tap } from 'rxjs';
 
 import { DestinationPoint } from './destination-point';
 import { Ground } from './ground';
@@ -29,6 +29,7 @@ export class DestinationPointPublisher {
           current.z === previous.z
       ),
       filter(point => ground.hasPoint(point)),
+      filter(() => DestinationPoint.instance?.isCancelled() ?? true),
       map(point => new Vector3(point.x, ground.position.y, point.z)),
       map(position => DestinationPoint.changePosition(position, scene))
     );

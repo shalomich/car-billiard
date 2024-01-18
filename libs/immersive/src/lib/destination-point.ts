@@ -30,6 +30,10 @@ export class DestinationPoint implements IDisposable {
     return this.mesh.position;
   }
 
+  public isCancelled(): boolean {
+    return !this.mesh.isEnabled();
+  }
+
   public static changePosition(position: Vector3, scene: Scene): DestinationPoint {
     if (DestinationPoint._instance === null) {
       DestinationPoint._instance = DestinationPoint.create(scene);
@@ -55,7 +59,7 @@ export class DestinationPoint implements IDisposable {
   ): DestinationPoint {
     const destinationPointMesh = MeshBuilder.CreateCylinder(
       DestinationPoint.id,
-      { diameter: 1,  height: 0.1},
+      { diameter: 0.5,  height: 0.03 },
       scene
     );
 
@@ -74,8 +78,8 @@ export class DestinationPoint implements IDisposable {
 
     return new DestinationPoint(destinationPointMesh);
   }
-
-  public hide(): void {
+  
+  public cancel(): void {
     this.mesh.setEnabled(false);
   }
 

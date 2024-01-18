@@ -110,12 +110,12 @@ export class Car implements IDisposable {
   }
 
   private collideDestinationPoint() {
-    DestinationPoint.instance?.hide();
+    DestinationPoint.instance?.cancel();
     this.stop();
   }
 
   private collideFigure(figure: Figure) {
-    DestinationPoint.instance?.hide();
+    DestinationPoint.instance?.cancel();
   
     const carBody = this.carMesh.physicsBody;
 
