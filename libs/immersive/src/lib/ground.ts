@@ -2,45 +2,33 @@ import { Color3, GroundMesh, IDisposable, MeshBuilder, PhysicsAggregate, Physics
 
 export class Ground implements IDisposable {
 
-    public constructor(private readonly groundMesh: GroundMesh) {
+    public constructor(public readonly mesh: GroundMesh) {
 
     }
     
-    public get position() {
-        return this.groundMesh.position;
-    }
-
     public static create(scene: Scene) {
-        const groundMesh = MeshBuilder.CreateGround(
+        const mesh = MeshBuilder.CreateGround(
             'ground',
             { width: 20, height: 20 },
             scene
           );
           const material = new StandardMaterial('groundMaterial', scene);
           material.diffuseColor = Color3.Green();
-          groundMesh.material = material;
-          
+          mesh.material = material;
           const groundAggregate = new PhysicsAggregate(
-            groundMesh,
+            mesh,
             PhysicsShapeType.BOX,
-            { mass: 0 },
+            { mass: 0, friction: 1 },
             scene
           );
       
-        return new Ground(groundMesh);
+        return new Ground(mesh);
     }
 
-    public hasPoint(point: Vector3) {
-        const { minimum, maximum} = this.groundMesh.getBoundingInfo();
+    public getRandomPoint(shift?: number) {
+        let { minimum: { x: minX, z: minZ}, maximum: { x: maxX, z: maxZ} } = this.mesh.getBoundingInfo();
         
-        return point.x >= minimum.x && point.x <= maximum.x &&
-            point.z >= minimum.z && point.z <= maximum.z;
-    }
-
-    public getRandomPoint(shift: number | null) {
-        let { minimum: { x: minX, z: minZ}, maximum: { x: maxX, z: maxZ} } = this.groundMesh.getBoundingInfo();
-        
-        if (shift !== null) {
+        if (shift !== undefined) {
             minX += shift;
             minZ += shift;
             maxX -= shift;
@@ -49,7 +37,7 @@ export class Ground implements IDisposable {
         
         return new Vector3(
             this.generateRandomFloat(minX, maxX), 
-            this.groundMesh.position.y + 1, 
+            this.mesh.position.y + 1, 
             this.generateRandomFloat(minZ, maxZ)
         );
     }
@@ -62,6 +50,6 @@ export class Ground implements IDisposable {
 
     /** @inheritdoc */
     public dispose(): void {
-        this.groundMesh.dispose();
+        this.mesh.dispose();
     }
 }

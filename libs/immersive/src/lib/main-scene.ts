@@ -38,13 +38,15 @@ export class MainScene {
     MainLight.create(this.scene);
 
     this.addPhysics().then(() => {
-      this.ground = Ground.create(this.scene);
-      this.figureManager = new FiguresManager(this.ground, this.scene);
-      this.figureManager.initFigures(gameConfiguration);
-      this.figureManager.onFiguresEnd = onGameComplete;
-      CarFactory.create(this.ground, this.scene).then(({ car, disposeCar }) => {
+      const ground = Ground.create(this.scene);
+      this.ground = ground;
+      CarFactory.create(ground, this.scene).then(({ car, disposeCar }) => {
         this.car = car;
         this.disposeCar = disposeCar;
+        
+        this.figureManager = new FiguresManager(ground, this.car, this.scene);
+        this.figureManager.initFigures(gameConfiguration);
+        this.figureManager.onFiguresEnd = onGameComplete;
       });
     });
   }

@@ -1,6 +1,5 @@
 import {
   Geometry,
-  GroundMesh,
   Mesh,
   PhysicsAggregate,
   PhysicsShapeType,
@@ -114,10 +113,11 @@ export namespace CarFactory {
    * @param ground - Ground.
    */
   function addPosition(carMesh: Mesh, ground: Ground): void {
+    const groundMeshPosition = ground.mesh.position; 
     carMesh.position = new Vector3(
-      ground.position.x,
-      ground.position.y + carMesh.scaling.y / 2,
-      ground.position.z
+      groundMeshPosition.x,
+      groundMeshPosition.y + carMesh.scaling.y / 2,
+      groundMeshPosition.z
     );
   }
 

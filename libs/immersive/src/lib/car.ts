@@ -14,39 +14,39 @@ export class Car implements IDisposable {
   public static readonly id = 'car' as const;
 
   public constructor(
-    public readonly carMesh: AbstractMesh,
+    public readonly mesh: AbstractMesh,
     private readonly ground: Ground,
     private readonly scene: Scene
   ) {
     this.addCollisions();
   }
   
-  public static isCar(node: TransformNode): node is AbstractMesh {
-    return node.id === Car.id;
-  }
-
   /**
    * Move to destination.
    * @param destinationPoint - Destination point.
    */
   public move(destinationPoint: DestinationPoint): void {
     this.scene.beginDirectAnimation(
-      this.carMesh,
+      this.mesh,
       [this.getTurnAnimation(destinationPoint)],
       0, 30, false, 1,
       () => this.transferTo(destinationPoint)
     );
   }
 
+  public static isCar(node: TransformNode): node is AbstractMesh {
+    return node.id === Car.id;
+  }
+
   private getTurnAnimation(destinationPoint: DestinationPoint): Animation {
-    const { position } = this.carMesh;
+    const { position } = this.mesh;
 
     const axisBeginning = new Vector3(position.x, position.y, position.z + 1);
 
     const angle = VectorUtils.calculateAngleInRadians(
       axisBeginning,
-      destinationPoint.position,
-      this.carMesh.position
+      destinationPoint.mesh.position,
+      this.mesh.position
     );
 
     const turnAnimation = new Animation(
@@ -60,11 +60,11 @@ export class Car implements IDisposable {
     turnAnimation.setKeys([
       {
         frame: 0,
-        value: this.carMesh.rotation.y,
+        value: this.mesh.rotation.y,
       },
       {
         frame: 30,
-        value: position.x < destinationPoint.position.x ? angle : -angle,
+        value: position.x < destinationPoint.mesh.position.x ? angle : -angle,
       },
     ]);
 
@@ -72,7 +72,7 @@ export class Car implements IDisposable {
   }
 
   private transferTo(destinationPoint: DestinationPoint): void {
-    const carBody = this.carMesh.physicsBody;
+    const carBody = this.mesh.physicsBody;
 
     if (carBody === null) {
       throw new Error('There is no car physics body.');
@@ -80,15 +80,15 @@ export class Car implements IDisposable {
   
     const force = this.mass * this.acceleration;
     const forceVector = VectorUtils.getDirectionalVector(
-      this.carMesh.position,
-      destinationPoint.position
+      this.mesh.position,
+      destinationPoint.mesh.position
     ).scale(force);
     
-    carBody.applyForce(forceVector, this.carMesh.position);
+    carBody.applyForce(forceVector, this.mesh.position);
   }
 
   private addCollisions(): void {
-    const carBody = this.carMesh.physicsBody;
+    const carBody = this.mesh.physicsBody;
 
     if (carBody === null) {
       throw new Error('There is no car physics body.');
@@ -117,7 +117,7 @@ export class Car implements IDisposable {
   private collideFigure(figure: Figure) {
     DestinationPoint.instance?.cancel();
   
-    const carBody = this.carMesh.physicsBody;
+    const carBody = this.mesh.physicsBody;
 
     if (carBody === null) {
       throw new Error('There is no car physics body.');
@@ -132,12 +132,12 @@ export class Car implements IDisposable {
   }
 
   private stop(): void {
-    this.carMesh.physicsBody?.setLinearVelocity(Vector3.Zero());
-    this.carMesh.physicsBody?.setAngularVelocity(Vector3.Zero());
+    this.mesh.physicsBody?.setLinearVelocity(Vector3.Zero());
+    this.mesh.physicsBody?.setAngularVelocity(Vector3.Zero());
   }
 
   /** @inheritdoc */
   public dispose(): void {
-    this.carMesh.dispose();
+    this.mesh.dispose();
   }
 }

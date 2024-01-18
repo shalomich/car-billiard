@@ -2,6 +2,8 @@ import { IDisposable, Scene } from '@babylonjs/core';
 import { GameConfiguration } from './game-configuration';
 import { Figure } from './figure';
 import { Ground } from './ground';
+import { Car } from './car';
+import { MeshUtils } from './mesh.utils';
 
 type FigureFactory = (idNumber: number, ground: Ground, scene: Scene) => Figure;
 
@@ -14,6 +16,7 @@ export class FiguresManager implements IDisposable {
 
     public constructor(
         private readonly ground: Ground,
+        private readonly car: Car,
         private readonly scene: Scene) {
 
     }
@@ -46,20 +49,44 @@ export class FiguresManager implements IDisposable {
             this.setFigurePosition(figure);
             figure.onFellOfGround = figure => this.observeFigureFellOffGround(figure);
 
-            this.figures.set(figure.id, figure);
+            this.figures.set(figure.mesh.id, figure);
         }
     }
 
-    private setFigurePosition(figure: Figure) {
+    private async setFigurePosition(figure: Figure) {
+        const { mesh: figureMesh } = figure;
         const figureShift = Figure.figureSize / 2;
-        const figurePosition = this.ground.getRandomPoint(figureShift);
-        figure.position = figurePosition;
+        
+        while (true) {
+            const figurePosition = this.ground.getRandomPoint(figureShift);
+            
+            figureMesh.position = figurePosition;
+            // To update bounding info.
+            figureMesh.computeWorldMatrix(true);
+            
+            if (!this.hasIntersection(figure)) {
+                break;
+            }        
+        }
+    }
+
+    private hasIntersection(newFigure: Figure): boolean {
+        if (MeshUtils.hasIntersection(newFigure.mesh, this.car.mesh)) {
+            return true;
+        }
+        
+        for (const [, figure] of this.figures) {
+            if (MeshUtils.hasIntersection(newFigure.mesh, figure.mesh)) {
+                return true;
+            }
+        }
+    
+        return false;
     }
 
     private observeFigureFellOffGround(figure: Figure): void {
-        console.log('delete ' + figure.id);        
         figure.dispose();
-        this.figures.delete(figure.id);
+        this.figures.delete(figure.mesh.id);
 
         if (this.figures.size === 0) {
             this.onFiguresEnd();

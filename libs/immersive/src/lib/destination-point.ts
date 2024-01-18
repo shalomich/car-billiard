@@ -22,16 +22,15 @@ export class DestinationPoint implements IDisposable {
     return DestinationPoint._instance;
   }
 
-  private constructor(private readonly mesh: Mesh) {
-  }
-
-  /** Destination point position. */
-  public get position(): Vector3 {
-    return this.mesh.position;
+  private constructor(public readonly mesh: Mesh) {
   }
 
   public isCancelled(): boolean {
     return !this.mesh.isEnabled();
+  }
+
+  public cancel(): void {
+    this.mesh.setEnabled(false);
   }
 
   public static changePosition(position: Vector3, scene: Scene): DestinationPoint {
@@ -79,10 +78,6 @@ export class DestinationPoint implements IDisposable {
     return new DestinationPoint(destinationPointMesh);
   }
   
-  public cancel(): void {
-    this.mesh.setEnabled(false);
-  }
-
   /** @inheritdoc */
   public dispose(): void {
     this.mesh.dispose();
