@@ -1,13 +1,19 @@
-import { IDisposable, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, TransformNode, Vector3 } from "@babylonjs/core";
+import { IBasePhysicsCollisionEvent, IDisposable, Mesh, MeshBuilder, Observer, PhysicsAggregate, PhysicsShapeType, Scene, TransformNode, Vector3 } from "@babylonjs/core";
 import { Car } from "./car";
 import { Ground } from "./ground";
-import { MeshUtils } from "./mesh.utils";
+import { Observable } from "rxjs";
 
 export class Figure implements IDisposable {
     
     public static readonly figureSize = 1 as const;
 
     private static readonly idPreffix = 'figure' as const;
+
+    private checkPositionIntervalId: number | null = null;
+
+    private collisionEndObserver: Observer<IBasePhysicsCollisionEvent> | null = null;
+
+    public positionChange$: Observable<Figure>;
 
     public constructor(
         public readonly mesh: Mesh, 
@@ -17,14 +23,10 @@ export class Figure implements IDisposable {
             throw new Error('Wrong mesh for destination point.');
         }
 
-        this.addFellOffGroundObservable();
+        this.positionChange$ = this.getPositionChangeStream();
     }
 
     public onFellOfGround: (figure: Figure) => void = () => undefined;
-
-    public isOnGround() {
-        return MeshUtils.hasIntersection(this.ground.mesh, this.mesh);
-    }
 
     public push(velocity: Vector3) {
         this.mesh.physicsBody?.applyImpulse(velocity, this.mesh.position);
@@ -87,46 +89,61 @@ export class Figure implements IDisposable {
         return this.idPreffix + idNumber.toString();
     }
 
-    private addFellOffGroundObservable() {
+    private getPositionChangeStream(): Observable<Figure> {
         const figureBody = this.mesh.physicsBody;
 
         if (figureBody === null) {
             throw new Error('There is no figure physics body.');
         }
 
-        let checkFigureOnGroundIntervalId: number | null = null;
-
         const collisionEndObservable = figureBody.getCollisionEndedObservable();
         
-        const collisionEndObserver = collisionEndObservable.add(event => {
-            const collidedNode = event.collidedAgainst.transformNode;
-            
-            if (!Figure.isFigure(collidedNode) && !Car.isCar(collidedNode)) {
-                return;
-            }
-
-            if (checkFigureOnGroundIntervalId !== null) {
-                clearInterval(checkFigureOnGroundIntervalId);
-            }
-
-            checkFigureOnGroundIntervalId = setInterval(() => {
-                if (this.isOnGround()) {
+        return new Observable<Figure>((subscriber) => {
+            this.collisionEndObserver = collisionEndObservable.add(event => {
+                const collidedNode = event.collidedAgainst.transformNode;
+                
+                if (!Figure.isFigure(collidedNode) && !Car.isCar(collidedNode)) {
                     return;
                 }
-            
-                this.onFellOfGround(this);
-
-                collisionEndObservable.remove(collisionEndObserver);
-
-                if (checkFigureOnGroundIntervalId !== null) {
-                    clearInterval(checkFigureOnGroundIntervalId);
+    
+                if (this.checkPositionIntervalId !== null) {
+                    clearInterval(this.checkPositionIntervalId);
                 }
-            }, 2000);
+    
+                this.checkPositionIntervalId = setInterval(() => {
+                    subscriber.next(this);
+                }, 2000);
+
+                return () => this.eraseObservers();
+            });
         });
+    }
+
+    private eraseObservers() {
+        if (this.checkPositionIntervalId !== null) {
+            clearInterval(this.checkPositionIntervalId);
+            this.checkPositionIntervalId = null;
+        }
+
+        if (this.collisionEndObserver === null) {
+            return;
+        }
+
+        const figureBody = this.mesh.physicsBody;
+
+        if (figureBody === null) {
+            throw new Error('There is no figure physics body.');
+        }
+
+        const collisionEndObservable = figureBody.getCollisionEndedObservable();
+
+        collisionEndObservable.remove(this.collisionEndObserver);
+        this.collisionEndObserver = null;    
     }
 
     /** @inheritdoc */
     public dispose(): void {
+        this.eraseObservers();
         this.mesh.dispose();
     }
 }

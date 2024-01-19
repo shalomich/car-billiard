@@ -4,6 +4,7 @@ import { Figure } from './figure';
 import { Ground } from './ground';
 import { Car } from './car';
 import { MeshUtils } from './mesh.utils';
+import { Subscription, delay, filter, from, mergeMap, tap } from 'rxjs';
 
 type FigureFactory = (idNumber: number, ground: Ground, scene: Scene) => Figure;
 
@@ -12,26 +13,23 @@ export class FiguresManager implements IDisposable {
     public static readonly minFigureCount = 1 as const;
     public static readonly maxFigureCount = 5 as const;
 
-    private readonly figures = new Map<string, Figure>();
+    private readonly figures = new Set<Figure>();
+    private readonly figuresPositionChangeSubscription: Subscription;
 
     public constructor(
+        configuration: GameConfiguration,
         private readonly ground: Ground,
         private readonly car: Car,
         private readonly scene: Scene) {
-
+            this.initFigures(configuration.cubeCount, Figure.createCube);
+            this.initFigures(configuration.cylinderCount, Figure.createCylinder);
+            this.initFigures(configuration.sphereCount, Figure.createSphere);
+            this.figuresPositionChangeSubscription = this.subscribeToFiguresPositionChange();
     }
 
     public onFiguresEnd: () => void = () => undefined;
-    
-    public initFigures(
-        configuration: GameConfiguration, 
-        ): void {
-        this.initFigure(configuration.cubeCount, Figure.createCube);
-        this.initFigure(configuration.cylinderCount, Figure.createCylinder);
-        this.initFigure(configuration.sphereCount, Figure.createSphere);
-    }
 
-    private initFigure(
+    private initFigures(
         figureCount: number, 
         figureFactory: FigureFactory) {
         if (figureCount < FiguresManager.minFigureCount) {
@@ -45,11 +43,8 @@ export class FiguresManager implements IDisposable {
         for (let i = 0; i < figureCount; i++) {
             const idNumber = this.figures.size + 1;
             const figure = figureFactory(idNumber, this.ground, this.scene);
-            
             this.setFigurePosition(figure);
-            figure.onFellOfGround = figure => this.observeFigureFellOffGround(figure);
-
-            this.figures.set(figure.mesh.id, figure);
+            this.figures.add(figure);
         }
     }
 
@@ -64,18 +59,18 @@ export class FiguresManager implements IDisposable {
             // To update bounding info.
             figureMesh.computeWorldMatrix(true);
             
-            if (!this.hasIntersection(figure)) {
+            if (!this.hasFigureIntersection(figure)) {
                 break;
             }        
         }
     }
 
-    private hasIntersection(newFigure: Figure): boolean {
+    private hasFigureIntersection(newFigure: Figure): boolean {
         if (MeshUtils.hasIntersection(newFigure.mesh, this.car.mesh)) {
             return true;
         }
         
-        for (const [, figure] of this.figures) {
+        for (const figure of this.figures) {
             if (MeshUtils.hasIntersection(newFigure.mesh, figure.mesh)) {
                 return true;
             }
@@ -84,9 +79,27 @@ export class FiguresManager implements IDisposable {
         return false;
     }
 
-    private observeFigureFellOffGround(figure: Figure): void {
+    private subscribeToFiguresPositionChange(): Subscription {
+        const fallTimeInMilliseconds = 1000;
+
+        const positionChangeStreams = [...this.figures]
+            .map(figure => figure.positionChange$);
+        
+        return from(positionChangeStreams).pipe(
+            mergeMap(positionChangeStream => positionChangeStream),
+            filter(figure => !this.isFigureOnGround(figure)),
+            delay(fallTimeInMilliseconds),
+            tap(figure => this.removeFigure(figure)),
+        ).subscribe();
+    }
+
+    private isFigureOnGround(figure: Figure) {
+        return MeshUtils.hasIntersection(this.ground.mesh, figure.mesh);
+    }
+
+    private removeFigure(figure: Figure): void {
         figure.dispose();
-        this.figures.delete(figure.mesh.id);
+        this.figures.delete(figure);
 
         if (this.figures.size === 0) {
             this.onFiguresEnd();
@@ -95,10 +108,12 @@ export class FiguresManager implements IDisposable {
 
     /** @inheritdoc */
     public dispose(): void {
-        for (const [, figure] of this.figures) {
+        for (const figure of this.figures) {
             figure.dispose();
         }
 
         this.figures.clear();
+
+        this.figuresPositionChangeSubscription.unsubscribe();
     }
 }

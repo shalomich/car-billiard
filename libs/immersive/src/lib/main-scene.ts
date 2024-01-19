@@ -44,8 +44,12 @@ export class MainScene {
         this.car = car;
         this.disposeCar = disposeCar;
         
-        this.figureManager = new FiguresManager(ground, this.car, this.scene);
-        this.figureManager.initFigures(gameConfiguration);
+        this.figureManager = new FiguresManager(
+          gameConfiguration, 
+          ground, 
+          car, 
+          this.scene
+        );
         this.figureManager.onFiguresEnd = onGameComplete;
       });
     });
