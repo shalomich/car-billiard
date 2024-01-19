@@ -1,5 +1,5 @@
 import { Scene, Vector3 } from '@babylonjs/core';
-import { Observable, debounceTime, distinctUntilChanged, filter, map, tap } from 'rxjs';
+import { Observable, debounceTime, distinctUntilChanged, filter, map} from 'rxjs';
 
 import { DestinationPoint } from './destination-point';
 import { Ground } from './ground';
@@ -9,7 +9,7 @@ export class DestinationPointPublisher {
   /** Destination points stream. */
   public readonly destinationPoints$: Observable<DestinationPoint>;
 
-  public constructor(scene: Scene, ground: Ground) {
+  public constructor(ground: Ground, scene: Scene) {
     this.destinationPoints$ = this.getDestinationPointsStream(
       scene,
       ground

@@ -13,30 +13,29 @@ export class Figure implements IDisposable {
 
     private collisionEndObserver: Observer<IBasePhysicsCollisionEvent> | null = null;
 
-    public positionChange$: Observable<Figure>;
+    public readonly positionChanges$: Observable<Figure>;
 
     public constructor(
-        public readonly mesh: Mesh, 
-        private readonly ground: Ground,
+        public readonly mesh: Mesh,
     ) {
         if (!Figure.isFigure(mesh)) {
             throw new Error('Wrong mesh for destination point.');
         }
 
-        this.positionChange$ = this.getPositionChangeStream();
+        this.positionChanges$ = this.getPositionChangeStream();
     }
 
     public onFellOfGround: (figure: Figure) => void = () => undefined;
 
-    public push(velocity: Vector3) {
-        this.mesh.physicsBody?.applyImpulse(velocity, this.mesh.position);
+    public move(impulse: Vector3) {
+        this.mesh.physicsBody?.applyImpulse(impulse, this.mesh.position);
     }
 
     public static isFigure(node: TransformNode): node is Mesh {
         return node.id.startsWith(this.idPreffix);
     }
 
-    public static createCube(idNumber: number, ground: Ground, scene: Scene): Figure {
+    public static createCube(idNumber: number, scene: Scene): Figure {
         const cube = MeshBuilder.CreateBox(Figure.getFullId(idNumber), { size: Figure.figureSize }, scene);
         
         const aggregate = new PhysicsAggregate(
@@ -48,10 +47,10 @@ export class Figure implements IDisposable {
 
         aggregate.body.disablePreStep = false;
 
-        return new Figure(cube, ground);
+        return new Figure(cube);
     }
 
-    public static createCylinder(idNumber: number, ground: Ground, scene: Scene): Figure {
+    public static createCylinder(idNumber: number, scene: Scene): Figure {
         const cylinder = MeshBuilder.CreateCylinder(Figure.getFullId(idNumber), { 
             height: Figure.figureSize, 
             diameter: Figure.figureSize 
@@ -66,10 +65,10 @@ export class Figure implements IDisposable {
 
         aggregate.body.disablePreStep = false;
 
-        return new Figure(cylinder, ground);
+        return new Figure(cylinder);
     }
 
-    public static createSphere(idNumber: number, ground: Ground, scene: Scene): Figure {
+    public static createSphere(idNumber: number, scene: Scene): Figure {
         const sphere = MeshBuilder.CreateSphere(Figure.getFullId(idNumber), { diameter: Figure.figureSize }, scene);
         
         const aggregate = new PhysicsAggregate(
@@ -81,7 +80,7 @@ export class Figure implements IDisposable {
 
         aggregate.body.disablePreStep = false;
 
-        return new Figure(sphere, ground);
+        return new Figure(sphere);
     }
 
     

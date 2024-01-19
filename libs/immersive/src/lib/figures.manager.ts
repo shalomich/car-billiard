@@ -6,7 +6,7 @@ import { Car } from './car';
 import { MeshUtils } from './mesh.utils';
 import { Subscription, delay, filter, from, mergeMap, tap } from 'rxjs';
 
-type FigureFactory = (idNumber: number, ground: Ground, scene: Scene) => Figure;
+type FigureFactory = (idNumber: number, scene: Scene) => Figure;
 
 export class FiguresManager implements IDisposable {
 
@@ -42,7 +42,7 @@ export class FiguresManager implements IDisposable {
 
         for (let i = 0; i < figureCount; i++) {
             const idNumber = this.figures.size + 1;
-            const figure = figureFactory(idNumber, this.ground, this.scene);
+            const figure = figureFactory(idNumber, this.scene);
             this.setFigurePosition(figure);
             this.figures.add(figure);
         }
@@ -83,7 +83,7 @@ export class FiguresManager implements IDisposable {
         const fallTimeInMilliseconds = 1000;
 
         const positionChangeStreams = [...this.figures]
-            .map(figure => figure.positionChange$);
+            .map(figure => figure.positionChanges$);
         
         return from(positionChangeStreams).pipe(
             mergeMap(positionChangeStream => positionChangeStream),
