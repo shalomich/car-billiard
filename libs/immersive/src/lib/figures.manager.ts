@@ -1,12 +1,12 @@
-import { IDisposable, Scene } from '@babylonjs/core';
+import { IDisposable, Scene, Vector3 } from '@babylonjs/core';
 import { GameConfiguration } from './game-configuration';
 import { Figure } from './figure';
 import { Ground } from './ground';
 import { Car } from './car';
 import { MeshUtils } from './mesh.utils';
-import { Subscription, delay, filter, from, mergeMap, tap } from 'rxjs';
+import { Subscription, delay, filter, from, map, mergeMap, takeWhile, tap } from 'rxjs';
 
-type FigureFactory = (idNumber: number, scene: Scene) => Figure;
+type FigureFactory = (scene: Scene) => Figure;
 
 export class FiguresManager implements IDisposable {
 
@@ -14,7 +14,7 @@ export class FiguresManager implements IDisposable {
     public static readonly maxFigureCount = 5 as const;
 
     private readonly figures = new Set<Figure>();
-    private readonly figuresPositionChangeSubscription: Subscription;
+    private readonly figuresRemovingSubscription: Subscription;
 
     public constructor(
         configuration: GameConfiguration,
@@ -24,7 +24,7 @@ export class FiguresManager implements IDisposable {
             this.initFigures(configuration.cubeCount, Figure.createCube);
             this.initFigures(configuration.cylinderCount, Figure.createCylinder);
             this.initFigures(configuration.sphereCount, Figure.createSphere);
-            this.figuresPositionChangeSubscription = this.subscribeToFiguresPositionChange();
+            this.figuresRemovingSubscription = this.subscribeToFiguresRemoving();
     }
 
     public onFiguresEnd: () => void = () => undefined;
@@ -41,8 +41,7 @@ export class FiguresManager implements IDisposable {
         }
 
         for (let i = 0; i < figureCount; i++) {
-            const idNumber = this.figures.size + 1;
-            const figure = figureFactory(idNumber, this.scene);
+            const figure = figureFactory(this.scene);
             this.setFigurePosition(figure);
             this.figures.add(figure);
         }
@@ -79,22 +78,24 @@ export class FiguresManager implements IDisposable {
         return false;
     }
 
-    private subscribeToFiguresPositionChange(): Subscription {
+    private subscribeToFiguresRemoving(): Subscription {
         const fallTimeInMilliseconds = 1000;
 
-        const positionChangeStreams = [...this.figures]
-            .map(figure => figure.positionChanges$);
-        
-        return from(positionChangeStreams).pipe(
-            mergeMap(positionChangeStream => positionChangeStream),
-            filter(figure => !this.isFigureOnGround(figure)),
+        return from(this.figures).pipe(
+            mergeMap(figure => figure.positionChanges$.pipe(
+                map(figurePosition => ({ figure, figurePosition }))
+            )),
+            filter(({ figure }) => this.figures.has(figure)),
+            filter(({ figurePosition }) => !this.isFigureOnGround(figurePosition)),
             delay(fallTimeInMilliseconds),
-            tap(figure => this.removeFigure(figure)),
+            tap( ({ figure }) => this.removeFigure(figure)),
         ).subscribe();
     }
 
-    private isFigureOnGround(figure: Figure) {
-        return MeshUtils.hasIntersection(this.ground.mesh, figure.mesh);
+    private isFigureOnGround(figurePosition: Vector3) {
+        const {x, z} = figurePosition;
+        const figurePositionOnGround = new Vector3(x, this.ground.mesh.position.y, z);
+        return MeshUtils.hasIntersectionWithPoint(this.ground.mesh, figurePositionOnGround);
     }
 
     private removeFigure(figure: Figure): void {
@@ -114,6 +115,6 @@ export class FiguresManager implements IDisposable {
 
         this.figures.clear();
 
-        this.figuresPositionChangeSubscription.unsubscribe();
+        this.figuresRemovingSubscription.unsubscribe();
     }
 }

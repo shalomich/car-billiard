@@ -1,19 +1,13 @@
-import { IBasePhysicsCollisionEvent, IDisposable, Mesh, MeshBuilder, Observer, PhysicsAggregate, PhysicsShapeType, Scene, TransformNode, Vector3 } from "@babylonjs/core";
-import { Car } from "./car";
-import { Ground } from "./ground";
-import { Observable } from "rxjs";
+import { IDisposable, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, TransformNode, Vector3 } from "@babylonjs/core";
+import { Observable, distinctUntilChanged, interval, map } from "rxjs";
 
 export class Figure implements IDisposable {
     
     public static readonly figureSize = 1 as const;
 
-    private static readonly idPreffix = 'figure' as const;
+    private static readonly id = 'figure' as const;
 
-    private checkPositionIntervalId: number | null = null;
-
-    private collisionEndObserver: Observer<IBasePhysicsCollisionEvent> | null = null;
-
-    public readonly positionChanges$: Observable<Figure>;
+    public readonly positionChanges$: Observable<Vector3>;
 
     public constructor(
         public readonly mesh: Mesh,
@@ -32,11 +26,11 @@ export class Figure implements IDisposable {
     }
 
     public static isFigure(node: TransformNode): node is Mesh {
-        return node.id.startsWith(this.idPreffix);
+        return node.id === Figure.id;
     }
 
-    public static createCube(idNumber: number, scene: Scene): Figure {
-        const cube = MeshBuilder.CreateBox(Figure.getFullId(idNumber), { size: Figure.figureSize }, scene);
+    public static createCube(scene: Scene): Figure {
+        const cube = MeshBuilder.CreateBox(Figure.id, { size: Figure.figureSize }, scene);
         
         const aggregate = new PhysicsAggregate(
           cube,
@@ -50,8 +44,8 @@ export class Figure implements IDisposable {
         return new Figure(cube);
     }
 
-    public static createCylinder(idNumber: number, scene: Scene): Figure {
-        const cylinder = MeshBuilder.CreateCylinder(Figure.getFullId(idNumber), { 
+    public static createCylinder(scene: Scene): Figure {
+        const cylinder = MeshBuilder.CreateCylinder(Figure.id, { 
             height: Figure.figureSize, 
             diameter: Figure.figureSize 
         }, scene);
@@ -68,8 +62,8 @@ export class Figure implements IDisposable {
         return new Figure(cylinder);
     }
 
-    public static createSphere(idNumber: number, scene: Scene): Figure {
-        const sphere = MeshBuilder.CreateSphere(Figure.getFullId(idNumber), { diameter: Figure.figureSize }, scene);
+    public static createSphere(scene: Scene): Figure {
+        const sphere = MeshBuilder.CreateSphere(Figure.id, { diameter: Figure.figureSize }, scene);
         
         const aggregate = new PhysicsAggregate(
           sphere,
@@ -83,66 +77,14 @@ export class Figure implements IDisposable {
         return new Figure(sphere);
     }
 
-    
-    private static getFullId(idNumber: number): string {
-        return this.idPreffix + idNumber.toString();
-    }
-
-    private getPositionChangeStream(): Observable<Figure> {
-        const figureBody = this.mesh.physicsBody;
-
-        if (figureBody === null) {
-            throw new Error('There is no figure physics body.');
-        }
-
-        const collisionEndObservable = figureBody.getCollisionEndedObservable();
-        
-        return new Observable<Figure>((subscriber) => {
-            this.collisionEndObserver = collisionEndObservable.add(event => {
-                const collidedNode = event.collidedAgainst.transformNode;
-                
-                if (!Figure.isFigure(collidedNode) && !Car.isCar(collidedNode)) {
-                    return;
-                }
-    
-                if (this.checkPositionIntervalId !== null) {
-                    clearInterval(this.checkPositionIntervalId);
-                }
-    
-                this.checkPositionIntervalId = setInterval(() => {
-                    subscriber.next(this);
-                }, 2000);
-
-                return () => this.eraseObservers();
-            });
-        });
-    }
-
-    private eraseObservers() {
-        if (this.checkPositionIntervalId !== null) {
-            clearInterval(this.checkPositionIntervalId);
-            this.checkPositionIntervalId = null;
-        }
-
-        if (this.collisionEndObserver === null) {
-            return;
-        }
-
-        const figureBody = this.mesh.physicsBody;
-
-        if (figureBody === null) {
-            throw new Error('There is no figure physics body.');
-        }
-
-        const collisionEndObservable = figureBody.getCollisionEndedObservable();
-
-        collisionEndObservable.remove(this.collisionEndObserver);
-        this.collisionEndObserver = null;    
+    private getPositionChangeStream(): Observable<Vector3> {
+        return interval(2000).pipe(
+            map(() => this.mesh.position),
+        ); 
     }
 
     /** @inheritdoc */
     public dispose(): void {
-        this.eraseObservers();
         this.mesh.dispose();
     }
 }

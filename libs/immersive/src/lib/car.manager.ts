@@ -49,11 +49,9 @@ export class CarManager implements IDisposable {
   private subscribeToCarMovement(car: Car): Subscription {
     return this.touchedGroundPointPublisher.points$.pipe(
       filter(() => !car.isMoving()),
-      distinctUntilChanged(
-        (previous, current) =>
-          previous.x === current.x &&
-          previous.y === current.y &&
-          current.z === previous.z
+      distinctUntilChanged((previous, current) =>
+        previous.x === current.x &&
+        current.z === previous.z
       ),
       tap(point => car.move(DestinationPoint.create(point, this.scene)))
     ).subscribe();
