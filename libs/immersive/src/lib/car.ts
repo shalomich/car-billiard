@@ -1,31 +1,38 @@
-import { AbstractMesh, Animation, IDisposable, IPhysicsCollisionEvent, Mesh, Observer, PhysicsAggregate, PhysicsShapeType, Scene, SceneLoader, TransformNode, Vector3 } from '@babylonjs/core';
+import { AbstractMesh, Animation, IDisposable, IPhysicsCollisionEvent, Mesh, Observable, Observer, PhysicsAggregate, PhysicsShapeType, Scene, SceneLoader, TransformNode, Vector3 } from '@babylonjs/core';
 
 import { VectorUtils } from './vector.utils';
 import { DestinationPoint } from './destination-point';
 import { Figure } from './figure';
-import { Observable } from 'rxjs';
 
 /** Card. */
 export class Car implements IDisposable {
   private readonly mass = 5 as const;
   private readonly acceleration = 50 as const;
 
-  private static readonly id = 'car' as const;
+  private readonly collisionsObserver: Observer<IPhysicsCollisionEvent>;
 
-  public readonly collisions$: Observable<Figure | DestinationPoint>;
+  private destinationPoint: DestinationPoint | null = null;
+
+  private static readonly id = 'car' as const;
 
   public constructor(
     public readonly mesh: AbstractMesh,
     private readonly scene: Scene
   ) {
-    this.collisions$ = this.getCollisionsStream();
+    this.collisionsObserver = this.observeCollisions();
   }
-  
+
   /**
    * Move to destination.
    * @param destinationPoint - Destination point.
    */
   public move(destinationPoint: DestinationPoint): void {
+    if (this.isMoving()) {
+      throw new Error('The car is still moving.');
+    }
+
+    this.destinationPoint = destinationPoint;
+
     this.scene.beginDirectAnimation(
       this.mesh,
       [this.getTurnAnimation(destinationPoint)],
@@ -34,24 +41,10 @@ export class Car implements IDisposable {
     );
   }
 
-  public stop(): void {
-    this.mesh.physicsBody?.setLinearVelocity(Vector3.Zero());
-    this.mesh.physicsBody?.setAngularVelocity(Vector3.Zero());
+  public isMoving(): boolean {
+    return this.destinationPoint !== null;
   }
-
-  public pushFigure(figure: Figure) {
-    const carBody = this.mesh.physicsBody;
-
-    if (carBody === null) {
-      throw new Error('There is no car physics body.');
-    }
-
-    const impulse = carBody.getLinearVelocity()
-      .scale(carBody.getMassProperties().mass ?? 0);
-
-    figure.move(impulse);
-  }
-
+  
   public static isCar(node: TransformNode): node is AbstractMesh {
     return node.id === Car.id;
   }
@@ -135,7 +128,52 @@ export class Car implements IDisposable {
     carBody.applyForce(forceVector, this.mesh.position);
   }
 
-  private getCollisionsStream(): Observable<Figure | DestinationPoint> {
+  private stop(): void {
+    this.mesh.physicsBody?.setLinearVelocity(Vector3.Zero());
+    this.mesh.physicsBody?.setAngularVelocity(Vector3.Zero());
+  }
+
+  private pushFigure(figure: Figure) {
+    const carBody = this.mesh.physicsBody;
+
+    if (carBody === null) {
+      throw new Error('There is no car physics body.');
+    }
+
+    const impulse = carBody.getLinearVelocity()
+      .scale(carBody.getMassProperties().mass ?? 0);
+
+    figure.move(impulse);
+  }
+
+  private cancelDestinationPoint(): void {
+    this.destinationPoint?.dispose();
+    this.destinationPoint = null;
+  }
+
+  private observeCollisions(): Observer<IPhysicsCollisionEvent> {
+    const collisionObservable = this.getCollisionObservable();
+    
+    return collisionObservable.add((event) => {
+        const collidedNode = event.collidedAgainst.transformNode;
+        
+        const isFigure = Figure.isFigure(collidedNode);
+        const isDestinationPoint = DestinationPoint.isDestinationPoint(collidedNode);
+
+        if (!isFigure && !isDestinationPoint) {
+          return;
+        }
+
+        if (isFigure) {
+          this.pushFigure(new Figure(collidedNode));
+        }
+      
+        this.stop();
+        this.cancelDestinationPoint();
+    });
+  }
+
+  private getCollisionObservable(): Observable<IPhysicsCollisionEvent> {
     const carBody = this.mesh.physicsBody;
 
     if (carBody === null) {
@@ -143,27 +181,16 @@ export class Car implements IDisposable {
     }
 
     carBody.setCollisionCallbackEnabled(true);
-    const collisionObservable = carBody.getCollisionObservable();
-    
-    return new Observable<Figure | DestinationPoint>(subscriber => {
-      const collisionObserver = collisionObservable.add((event) => {
-        const collidedNode = event.collidedAgainst.transformNode;
-        
-        if (Figure.isFigure(collidedNode)) {
-          subscriber.next(new Figure(collidedNode));
-        }
-  
-        if (DestinationPoint.isDestinationPoint(collidedNode)) {
-          subscriber.next(DestinationPoint.instance!);
-        }
 
-        return () => collisionObservable.remove(collisionObserver);
-      });
-    })
+    return carBody.getCollisionObservable();
   }
 
   /** @inheritdoc */
   public dispose(): void {
     this.mesh.dispose();
+    this.cancelDestinationPoint();
+
+    const collisionObservable = this.getCollisionObservable();
+    collisionObservable.remove(this.collisionsObserver);
   }
 }

@@ -7,4 +7,8 @@ export namespace MeshUtils {
             meshToIntersect.getBoundingInfo().boundingSphere
         );
     }
+
+    export function hasIntersectionWithPoint(mesh: Mesh, point: Vector3) {
+        return mesh.getBoundingInfo().boundingBox.intersectsPoint(point);
+    }
 }

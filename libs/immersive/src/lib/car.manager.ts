@@ -3,30 +3,27 @@ import {
   Scene,
   Vector3,
 } from '@babylonjs/core';
-import { Subscription, tap } from 'rxjs';
+import { Subscription, distinctUntilChanged, filter, tap } from 'rxjs';
 
 import { Car } from './car';
-import { DestinationPointPublisher } from './destination-point-publisher';
+import { TouchedGroundPointPublisher } from './touched-ground-point-publisher';
 import { Ground } from './ground';
-import { Figure } from './figure';
 import { DestinationPoint } from './destination-point';
 
 /** Class for car management. */
 export class CarManager implements IDisposable {
 
-  private readonly destinationPointPubsliher: DestinationPointPublisher;
+  private readonly touchedGroundPointPublisher: TouchedGroundPointPublisher;
 
   private car: Car | null = null;
 
   private carMovementSubscription: Subscription | null = null;
 
-  private carCollisionsSubscription: Subscription | null = null;
-  
   public constructor(
     private readonly ground: Ground,
     private readonly scene: Scene,
     ) {
-      this.destinationPointPubsliher = new DestinationPointPublisher(ground, scene);
+      this.touchedGroundPointPublisher = new TouchedGroundPointPublisher(ground, scene);
   }
   
   public async initCar(): Promise<Car> {
@@ -35,7 +32,6 @@ export class CarManager implements IDisposable {
     this.setCarPosition(this.car);
 
     this.carMovementSubscription = this.subscribeToCarMovement(this.car);
-    this.carCollisionsSubscription = this.subscribeToCarCollisions(this.car);
 
     return this.car;
   }
@@ -51,35 +47,21 @@ export class CarManager implements IDisposable {
   }
 
   private subscribeToCarMovement(car: Car): Subscription {
-    return this.destinationPointPubsliher.destinationPoints$.pipe(
-      tap(destinationPoint => car.move(destinationPoint))
+    return this.touchedGroundPointPublisher.points$.pipe(
+      filter(() => !car.isMoving()),
+      distinctUntilChanged(
+        (previous, current) =>
+          previous.x === current.x &&
+          previous.y === current.y &&
+          current.z === previous.z
+      ),
+      tap(point => car.move(DestinationPoint.create(point, this.scene)))
     ).subscribe();
-  }
-
-  private subscribeToCarCollisions(car: Car): Subscription {
-      return car.collisions$.pipe(
-        tap(collidedObject => this.resolveCollisionForCar(car, collidedObject))
-      ).subscribe();
-  }
-
-  private resolveCollisionForCar(car: Car, collidedObject: Figure | DestinationPoint) {
-    DestinationPoint.instance?.cancel();
-
-    if (this.isFigureCollided(collidedObject)) {
-      car.pushFigure(collidedObject);
-    }
-
-    car.stop();
-  }
-
-  private isFigureCollided(collidedObject: Figure | DestinationPoint): collidedObject is Figure {
-    return (collidedObject as Figure).move !== undefined;
   }
 
   /** @inheritdoc */
   public dispose(): void {
     this.car?.dispose();
     this.carMovementSubscription?.unsubscribe();
-    this.carCollisionsSubscription?.unsubscribe();
   }
 }

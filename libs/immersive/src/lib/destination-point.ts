@@ -16,32 +16,7 @@ export class DestinationPoint implements IDisposable {
   
   private static readonly id = 'destination' as const;
 
-  private static _instance: DestinationPoint | null = null;
-
-  public static get instance(): DestinationPoint | null {
-    return DestinationPoint._instance;
-  }
-
   private constructor(public readonly mesh: Mesh) {
-  }
-
-  public isCancelled(): boolean {
-    return !this.mesh.isEnabled();
-  }
-
-  public cancel(): void {
-    this.mesh.setEnabled(false);
-  }
-
-  public static changePosition(position: Vector3, scene: Scene): DestinationPoint {
-    if (DestinationPoint._instance === null) {
-      DestinationPoint._instance = DestinationPoint.create(scene);
-    }
-
-    DestinationPoint._instance.mesh.position = position;
-    DestinationPoint._instance.mesh.setEnabled(true);
-
-    return DestinationPoint._instance;
   }
 
   public static isDestinationPoint(node: TransformNode): node is Mesh {
@@ -53,7 +28,8 @@ export class DestinationPoint implements IDisposable {
    * @param position - Position.
    * @param scene - Scene.
    */
-  private static create(
+  public static create(
+    position: Vector3,
     scene: Scene,
   ): DestinationPoint {
     const destinationPointMesh = MeshBuilder.CreateCylinder(
@@ -61,6 +37,8 @@ export class DestinationPoint implements IDisposable {
       { diameter: 0.5,  height: 0.03 },
       scene
     );
+
+    destinationPointMesh.position = position;
 
     const material = new StandardMaterial('destinationPointMaterial', scene);
     material.diffuseColor = Color3.Red();
@@ -81,6 +59,5 @@ export class DestinationPoint implements IDisposable {
   /** @inheritdoc */
   public dispose(): void {
     this.mesh.dispose();
-    DestinationPoint._instance = null;
   }
 }

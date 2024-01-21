@@ -1,16 +1,16 @@
 import { Scene, Vector3 } from '@babylonjs/core';
-import { Observable, debounceTime, distinctUntilChanged, filter, map} from 'rxjs';
+import { Observable, filter, map} from 'rxjs';
 
-import { DestinationPoint } from './destination-point';
 import { Ground } from './ground';
+import { MeshUtils } from './mesh.utils';
 
-/** Destination point publisher. */
-export class DestinationPointPublisher {
-  /** Destination points stream. */
-  public readonly destinationPoints$: Observable<DestinationPoint>;
+/** Touched ground point publisher. */
+export class TouchedGroundPointPublisher {
+  /** Touched ground point stream. */
+  public readonly points$: Observable<Vector3>;
 
   public constructor(ground: Ground, scene: Scene) {
-    this.destinationPoints$ = this.getDestinationPointsStream(
+    this.points$ = this.getDestinationPointsStream(
       scene,
       ground
     );
@@ -19,22 +19,14 @@ export class DestinationPointPublisher {
   private getDestinationPointsStream(
     scene: Scene,
     ground: Ground,
-  ): Observable<DestinationPoint> {
-    return this.getTappingStream(scene).pipe(
-      debounceTime(1000),
-      distinctUntilChanged(
-        (previous, current) =>
-          previous.x === current.x &&
-          previous.y === current.y &&
-          current.z === previous.z
-      ),
-      filter(() => DestinationPoint.instance?.isCancelled() ?? true),
+  ): Observable<Vector3> {
+    return this.getTouchedPointStream(scene).pipe(
       map(point => new Vector3(point.x, ground.mesh.position.y, point.z)),
-      map(position => DestinationPoint.changePosition(position, scene))
+      filter(point => MeshUtils.hasIntersectionWithPoint(ground.mesh, point)),
     );
   }
 
-  private getTappingStream(scene: Scene): Observable<Vector3> {
+  private getTouchedPointStream(scene: Scene): Observable<Vector3> {
     return new Observable<Vector3>((subscriber) => {
       const observer = scene.onPointerObservable.add((info) => {
         const { event, type, pickInfo } = info;

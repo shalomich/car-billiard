@@ -67,6 +67,5 @@ export class MainScene {
     this.ground?.dispose();
     this.carManager?.dispose();
     this.figureManager?.dispose();
-    DestinationPoint.instance?.dispose();
   }
 }
