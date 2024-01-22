@@ -1,11 +1,13 @@
 import { Color3, IDisposable, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Texture, TransformNode, Vector3, VideoTexture } from "@babylonjs/core";
-import { Observable, distinctUntilChanged, interval, map } from "rxjs";
+import { Observable, interval, map } from "rxjs";
 
 export class Figure implements IDisposable {
     
     public static readonly figureSize = 1 as const;
 
     private static readonly id = 'figure' as const;
+    private static readonly mass = 10;
+    private static readonly friction = 0.5;
 
     public readonly positionChanges$: Observable<Vector3>;
 
@@ -39,7 +41,7 @@ export class Figure implements IDisposable {
         const aggregate = new PhysicsAggregate(
             mesh,
           PhysicsShapeType.BOX,
-          { mass: 5, friction: 1 },
+          { mass: Figure.mass, friction: Figure.friction },
           scene
         );
 
@@ -61,7 +63,7 @@ export class Figure implements IDisposable {
         const aggregate = new PhysicsAggregate(
             mesh,
           PhysicsShapeType.CYLINDER,
-          { mass: 5, friction: 1 },
+          { mass: Figure.mass, friction: Figure.friction },
           scene
         );
 
@@ -80,7 +82,7 @@ export class Figure implements IDisposable {
         const aggregate = new PhysicsAggregate(
           mesh,
           PhysicsShapeType.SPHERE,
-          { mass: 5, friction: 1 },
+          { mass: Figure.mass, friction: Figure.friction },
           scene
         );
 
