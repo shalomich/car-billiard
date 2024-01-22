@@ -1,4 +1,4 @@
-import { IDisposable, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, TransformNode, Vector3 } from "@babylonjs/core";
+import { Color3, IDisposable, Mesh, MeshBuilder, PhysicsAggregate, PhysicsShapeType, Scene, StandardMaterial, Texture, TransformNode, Vector3, VideoTexture } from "@babylonjs/core";
 import { Observable, distinctUntilChanged, interval, map } from "rxjs";
 
 export class Figure implements IDisposable {
@@ -30,10 +30,14 @@ export class Figure implements IDisposable {
     }
 
     public static createCube(scene: Scene): Figure {
-        const cube = MeshBuilder.CreateBox(Figure.id, { size: Figure.figureSize }, scene);
+        const mesh = MeshBuilder.CreateBox(Figure.id, { size: Figure.figureSize }, scene);
         
+        const material = new StandardMaterial('cylinderMaterial', scene);
+        material.diffuseTexture = new VideoTexture('video', 'assets/anime-chan-dancing.mp4', scene, true);
+        mesh.material = material;
+
         const aggregate = new PhysicsAggregate(
-          cube,
+            mesh,
           PhysicsShapeType.BOX,
           { mass: 5, friction: 1 },
           scene
@@ -41,17 +45,21 @@ export class Figure implements IDisposable {
 
         aggregate.body.disablePreStep = false;
 
-        return new Figure(cube);
+        return new Figure(mesh);
     }
 
     public static createCylinder(scene: Scene): Figure {
-        const cylinder = MeshBuilder.CreateCylinder(Figure.id, { 
+        const mesh = MeshBuilder.CreateCylinder(Figure.id, { 
             height: Figure.figureSize, 
             diameter: Figure.figureSize 
         }, scene);
 
+        const material = new StandardMaterial('cylinderMaterial', scene);
+        material.diffuseColor = Color3.Blue();
+        mesh.material = material;
+
         const aggregate = new PhysicsAggregate(
-          cylinder,
+            mesh,
           PhysicsShapeType.CYLINDER,
           { mass: 5, friction: 1 },
           scene
@@ -59,14 +67,18 @@ export class Figure implements IDisposable {
 
         aggregate.body.disablePreStep = false;
 
-        return new Figure(cylinder);
+        return new Figure(mesh);
     }
 
     public static createSphere(scene: Scene): Figure {
-        const sphere = MeshBuilder.CreateSphere(Figure.id, { diameter: Figure.figureSize }, scene);
+        const mesh = MeshBuilder.CreateSphere(Figure.id, { diameter: Figure.figureSize }, scene);
         
+        const material = new StandardMaterial('sphereMaterial', scene);
+        material.bumpTexture  = new Texture('assets/bump-texture.png', scene);
+        mesh.material = material;
+
         const aggregate = new PhysicsAggregate(
-          sphere,
+          mesh,
           PhysicsShapeType.SPHERE,
           { mass: 5, friction: 1 },
           scene
@@ -74,7 +86,7 @@ export class Figure implements IDisposable {
 
         aggregate.body.disablePreStep = false;
 
-        return new Figure(sphere);
+        return new Figure(mesh);
     }
 
     private getPositionChangeStream(): Observable<Vector3> {
