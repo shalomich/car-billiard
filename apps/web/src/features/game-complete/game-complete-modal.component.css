@@ -1,3 +1,11 @@
+:host {
+    /* To fix problem with redundant vertical scroll.*/
+    display: block;
+    height: 140px;
+
+    padding: 10px;
+}
+
 .game-complete-actions {
     display: flex;
     justify-content: space-around;

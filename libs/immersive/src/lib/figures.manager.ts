@@ -10,7 +10,7 @@ type FigureFactory = (scene: Scene) => Figure;
 
 export class FiguresManager implements IDisposable {
 
-    public static readonly minFigureCount = 0 as const;
+    public static readonly minFigureCount = 1 as const;
     public static readonly maxFigureCount = 5 as const;
 
     private readonly figures = new Set<Figure>();
