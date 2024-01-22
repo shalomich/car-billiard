@@ -4,12 +4,14 @@ import { VectorUtils } from './vector.utils';
 import { DestinationPoint } from './destination-point';
 import { Figure } from './figure';
 
+type CarObserverDisposing = () => void;
+
 /** Card. */
 export class Car implements IDisposable {
   private readonly mass = 5 as const;
   private readonly acceleration = 50 as const;
 
-  private readonly collisionsObserver: Observer<IPhysicsCollisionEvent>;
+  private readonly collisionsObserverDisposing: CarObserverDisposing;
 
   private destinationPoint: DestinationPoint | null = null;
 
@@ -19,7 +21,7 @@ export class Car implements IDisposable {
     public readonly mesh: AbstractMesh,
     private readonly scene: Scene
   ) {
-    this.collisionsObserver = this.observeCollisions();
+    this.collisionsObserverDisposing = this.observeCollisions();
   }
 
   /**
@@ -151,10 +153,18 @@ export class Car implements IDisposable {
     this.destinationPoint = null;
   }
 
-  private observeCollisions(): Observer<IPhysicsCollisionEvent> {
-    const collisionObservable = this.getCollisionObservable();
+  private observeCollisions(): CarObserverDisposing {
+    const carBody = this.mesh.physicsBody;
+
+    if (carBody === null) {
+      throw new Error('There is no car physics body.');
+    }
+
+    carBody.setCollisionCallbackEnabled(true);
+
+    const collisionObservable = carBody.getCollisionObservable();
     
-    return collisionObservable.add((event) => {
+    const collisionObserver = collisionObservable.add((event) => {
         const collidedNode = event.collidedAgainst.transformNode;
         
         const isFigure = Figure.isFigure(collidedNode);
@@ -171,26 +181,17 @@ export class Car implements IDisposable {
         this.stop();
         this.cancelDestinationPoint();
     });
-  }
 
-  private getCollisionObservable(): Observable<IPhysicsCollisionEvent> {
-    const carBody = this.mesh.physicsBody;
-
-    if (carBody === null) {
-      throw new Error('There is no car physics body.');
-    }
-
-    carBody.setCollisionCallbackEnabled(true);
-
-    return carBody.getCollisionObservable();
+    // Need this dispose function because physics body become null 
+    // and can not get collisionObservable.
+    return () => collisionObservable.remove(collisionObserver);
   }
 
   /** @inheritdoc */
   public dispose(): void {
-    this.mesh.dispose();
     this.cancelDestinationPoint();
 
-    const collisionObservable = this.getCollisionObservable();
-    collisionObservable.remove(this.collisionsObserver);
+    this.mesh.dispose();
+    this.collisionsObserverDisposing();
   }
 }
