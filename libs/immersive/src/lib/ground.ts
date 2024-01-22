@@ -18,7 +18,7 @@ export class Ground implements IDisposable {
           const groundAggregate = new PhysicsAggregate(
             mesh,
             PhysicsShapeType.BOX,
-            { mass: 0, friction: 1 },
+            { mass: 0, friction: 0.75 },
             scene
           );
       

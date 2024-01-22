@@ -11,7 +11,6 @@ import { CarManager } from './car.manager';
 import { FiguresManager } from './figures.manager';
 import { GameConfiguration } from './game-configuration';
 import { Ground } from './ground';
-import { DestinationPoint } from './destination-point';
 
 declare const HavokPhysics: () => Promise<unknown>;
 
@@ -32,11 +31,13 @@ export class MainScene {
       this.engine.runRenderLoop(() => this.scene.render());
       this.scene.useRightHandedSystem = true;
       
-      MainCamera.create(this.scene);
       MainLight.create(this.scene);
-
+      const mainCamera = MainCamera.create(this.scene);
+      
       this.addPhysics().then(() => {
         const ground = Ground.create(this.scene);
+        mainCamera.locate(ground);
+        
         this.ground = ground;
         this.carManager = new CarManager(ground, this.scene);
         this.carManager.initCar()
